@@ -1,0 +1,76 @@
+from scipy.io import arff
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report
+from warnings import simplefilter
+import matplotlib.pyplot as plt
+from pandas.plotting import scatter_matrix
+
+# Suppress FutureWarnings
+simplefilter(action='ignore', category=FutureWarning)
+
+# Read the .arff file
+data, meta = arff.loadarff('C:/Users/Carlos/Meu Drive/Python/Machine Learning/dry+bean+dataset/DryBeanDataset/Dry_Bean_Dataset.arff')
+dry_bean_data = pd.DataFrame(data)
+
+# Convert byte-like labels to string
+dry_bean_data['Class'] = dry_bean_data['Class'].str.decode('utf-8')
+
+# Print column names to verify
+print("Column Names:", dry_bean_data.columns)
+
+# Display dataset information
+print("Basic Statistics:", dry_bean_data.describe())
+print("Missing Values:", dry_bean_data.isnull().sum())
+# Replace 'class' with the actual column name for class labels once you know it
+print("Unique Classes:", dry_bean_data['Class'].unique())  
+
+# Assuming that the last column 'Class' is the categorical class label
+# and all other columns are numerical features
+features = dry_bean_data.columns[:-1]  # Exclude the last column which is 'Class'
+
+# Create the scatter matrix plot
+scatter_matrix(dry_bean_data[features], alpha=0.2, figsize=(15, 15), diagonal='hist')
+plt.suptitle("Scatter Matrix of Dry Bean Dataset")
+plt.show()
+
+# The column names are available in the 'meta' object if you wish to rename them
+# dry_bean_data.columns = [name for name in meta.names()]
+
+# Data Exploration
+#print("Basic Statistics:", dry_bean_data.describe())
+#print("Missing Values:", dry_bean_data.isnull().sum())
+#print("Unique Classes:", dry_bean_data['class'].unique())  # Assuming 'class' is your label column
+
+# Data Preprocessing
+X_dry_bean = dry_bean_data.iloc[:, :-1].values  # Features
+y_dry_bean = dry_bean_data.iloc[:, -1].values  # Labels
+
+# Split the data
+X_dry_bean_train_val, X_dry_bean_test, y_dry_bean_train_val, y_dry_bean_test = train_test_split(X_dry_bean, y_dry_bean, test_size=0.3, random_state=42)
+X_dry_bean_train, X_dry_bean_val, y_dry_bean_train, y_dry_bean_val = train_test_split(X_dry_bean_train_val, y_dry_bean_train_val, test_size=0.28, random_state=42)
+
+# Model Selection and Training
+knn_dry_bean = KNeighborsClassifier(n_neighbors=3)
+knn_dry_bean.fit(X_dry_bean_train, y_dry_bean_train)
+
+# Model Evaluation
+y_dry_bean_val_pred = knn_dry_bean.predict(X_dry_bean_val)
+print("## Validation Performance ##")
+print(classification_report(y_dry_bean_val, y_dry_bean_val_pred))
+
+# Hyperparameter Tuning
+param_grid_dry_bean = {'n_neighbors': [1, 3, 5, 7, 9, 11],
+                       'metric': ['euclidean', 'manhattan', 'minkowski'],
+                       'weights': ['uniform', 'distance']}
+grid_search_dry_bean = GridSearchCV(KNeighborsClassifier(), param_grid_dry_bean, cv=5)
+grid_search_dry_bean.fit(X_dry_bean_train, y_dry_bean_train)
+print("Best hyperparameters:", grid_search_dry_bean.best_params_)
+
+# Final Model Evaluation
+best_knn_dry_bean = grid_search_dry_bean.best_estimator_
+best_knn_dry_bean.fit(X_dry_bean_train, y_dry_bean_train)
+y_dry_bean_pred = best_knn_dry_bean.predict(X_dry_bean_test)
+print("## Test Performance ##")
+print(classification_report(y_dry_bean_test, y_dry_bean_pred))
